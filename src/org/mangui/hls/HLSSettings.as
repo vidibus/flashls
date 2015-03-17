@@ -83,7 +83,7 @@ package org.mangui.hls {
          *      0, means no retry, error will be triggered automatically
          *     -1 means infinite retry
          */
-        public static var fragmentLoadMaxRetry : int = 4000;
+        public static var fragmentLoadMaxRetry : int = 3;
         /** fragmentLoadMaxRetryTimeout
 
          * Maximum Fragment retry timeout (in milliseconds) in case I/O errors are met.
@@ -92,7 +92,7 @@ package org.mangui.hls {
          *
          * Default is 4000.
          */
-        public static var fragmentLoadMaxRetryTimeout : Number = 64000;
+        public static var fragmentLoadMaxRetryTimeout : Number = 4000;
         /** fragmentLoadSkipAfterMaxRetry
 
          * control behaviour in case fragment load still fails after max retry timeout
@@ -113,7 +113,7 @@ package org.mangui.hls {
          *      0, means no retry, error will be triggered automatically
          *     -1 means infinite retry
          */
-        public static var manifestLoadMaxRetry : int = -1;
+        public static var manifestLoadMaxRetry : int = 3;
         /** manifestLoadMaxRetryTimeout
 
          * Maximum Manifest retry timeout (in milliseconds) in case I/O errors are met.
@@ -133,7 +133,7 @@ package org.mangui.hls {
          *  from 0 to 1 : indicates the "normalized" preferred bitrate. As such, if it is 0.5, the closest to the middle bitrate will be selected and used first.
          * -1 : automatic start level selection, playback will start from level matching download bandwidth (determined from download of first segment)
          */
-        public static var startFromLevel : Number = -1;
+        public static var startFromLevel : Number = 0;
         /** seek level :
          *  from 0 to 1 : indicates the "normalized" preferred bitrate. As such, if it is 0.5, the closest to the middle bitrate will be selected and used first.
          * -1 : automatic start level selection, keep previous level matching previous download bandwidth
