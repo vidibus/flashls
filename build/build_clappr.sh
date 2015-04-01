@@ -1,5 +1,4 @@
 #!/bin/bash
-FLEXPATH=~/airsdk/
 
 OPT_DEBUG="
     -use-network=false \
