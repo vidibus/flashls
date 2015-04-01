@@ -2,32 +2,29 @@
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 package org.mangui.hls.loader {
-    import org.mangui.hls.model.Level;
-
-    import flash.utils.getTimer;
-    import flash.utils.clearTimeout;
-    import flash.utils.setTimeout;
     import flash.events.ErrorEvent;
-    import flash.events.SecurityErrorEvent;
     import flash.events.IOErrorEvent;
-
-    import org.mangui.hls.HLSSettings;
+    import flash.events.SecurityErrorEvent;
+    import flash.net.URLLoader;
+    import flash.utils.clearTimeout;
+    import flash.utils.getTimer;
+    import flash.utils.setTimeout;
     import org.mangui.hls.constant.HLSPlayStates;
-    import org.mangui.hls.model.AudioTrack;
-    import org.mangui.hls.model.Fragment;
     import org.mangui.hls.event.HLSError;
     import org.mangui.hls.event.HLSEvent;
+    import org.mangui.hls.event.HLSLoadMetrics;
+    import org.mangui.hls.HLS;
+    import org.mangui.hls.HLSSettings;
+    import org.mangui.hls.model.AudioTrack;
+    import org.mangui.hls.model.Fragment;
+    import org.mangui.hls.model.Level;
     import org.mangui.hls.playlist.AltAudioTrack;
     import org.mangui.hls.playlist.Manifest;
 
-    import flash.net.URLLoader;
-
-    import org.mangui.hls.HLS;
-
+    CONFIG::LOGGING {
+        import org.mangui.hls.utils.Log;
+    }
     public class AltAudioLevelLoader {
-        CONFIG::LOGGING {
-            import org.mangui.hls.utils.Log;
-        }
         /** Reference to the hls framework controller. **/
         private var _hls : HLS;
         /** Object that fetches the manifest. **/
@@ -86,27 +83,32 @@ package org.mangui.hls.loader {
         };
 
         /** parse a playlist **/
-        private function _parseAudioPlaylist(string : String, url : String, level : int) : void {
+        private function _parseAudioPlaylist(string : String, url : String, level : int, metrics : HLSLoadMetrics) : void {
             if (string != null && string.length != 0) {
                 CONFIG::LOGGING {
                     Log.debug("audio level " + level + " playlist:\n" + string);
                 }
                 var frags : Vector.<Fragment> = Manifest.getFragments(string, url, level);
                 // set fragment and update sequence number range
-                var newLevel : Level = new Level();
-                newLevel.updateFragments(frags);
-                newLevel.targetduration = Manifest.getTargetDuration(string);
-            // if stream is live, arm a timer to periodically reload playlist
-            if (!Manifest.hasEndlist(string)) {
-                var timeout : Number = Math.max(100, _reload_playlists_timer + 1000 * newLevel.averageduration - getTimer());
-                CONFIG::LOGGING {
-                    Log.debug("Alt Audio Level Live Playlist parsing finished: reload in " + timeout.toFixed(0) + " ms");
+                var audioTrack : AudioTrack = _hls.audioTracks[_current_track];
+                var audioLevel : Level = audioTrack.level;
+                if(audioLevel == null) {
+                    audioLevel = audioTrack.level = new Level();
                 }
-                _timeoutID = setTimeout(_loadAudioLevelPlaylist, timeout);
+                audioLevel.updateFragments(frags);
+                audioLevel.targetduration = Manifest.getTargetDuration(string);
+                // if stream is live, arm a timer to periodically reload playlist
+                if (!Manifest.hasEndlist(string)) {
+                    var timeout : Number = Math.max(100, _reload_playlists_timer + 1000 * audioLevel.averageduration - getTimer());
+                    CONFIG::LOGGING {
+                        Log.debug("Alt Audio Level Live Playlist parsing finished: reload in " + timeout.toFixed(0) + " ms");
+                    }
+                    _timeoutID = setTimeout(_loadAudioLevelPlaylist, timeout);
+                }
             }
-                _hls.audioTracks[_current_track].level = newLevel;
-            }
-            _hls.dispatchEvent(new HLSEvent(HLSEvent.AUDIO_LEVEL_LOADED, level));
+            metrics.id  = audioLevel.start_seqnum;
+            metrics.id2 = audioLevel.end_seqnum;
+            _hls.dispatchEvent(new HLSEvent(HLSEvent.AUDIO_LEVEL_LOADED, metrics));
             _manifest_loading = null;
         };
 

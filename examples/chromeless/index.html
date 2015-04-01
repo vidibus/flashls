@@ -26,9 +26,8 @@ var X_MAX_BACK_BUFFER = 8;
 var X_LOAD_LEVEL = 9;
 var X_AUDIOTRACKID = 10;
 var X_PLAYLIST_SLIDING = 11;
-var X_UTC_DATE = 12;
-var X_STARTLEVEL = 13;
-var X_SEEKLEVEL = 14;
+var X_STARTLEVEL = 12;
+var X_SEEKLEVEL = 13;
 var X_LOGDEBUG = 0;
 var X_LOGDEBUG2 = 1;
 var X_FLUSHLIVEURL = 2;
@@ -48,7 +47,6 @@ var Y_MAX_BACK_BUFFER = 1;
 var Y_LOAD_LEVEL = 1;
 var Y_AUDIOTRACKID = 1;
 var Y_PLAYLIST_SLIDING = 1;
-var Y_UTC_DATE = 1;
 var Y_STARTLEVEL = 1;
 var Y_SEEKLEVEL = 1;
 var Y_LOGDEBUG = 3;
@@ -57,10 +55,13 @@ var Y_FLUSHLIVEURL = 3;
 var Y_JSURLLOADER = 3;
 var Y_CAPLEVEL  = 3;
 var Y_USEHWDECODER = 3;
-  
+
 </script>
 
 <script type="text/javascript" src="../libs/ParsedQueryString.js"></script>
+<script type="text/javascript" src="../libs/UrlLoader.js"></script>
+<script type="text/javascript" src="../libs/canvas.js"></script>
+<script type="text/javascript" src="../libs/metrics.js"></script>
 
 <style type="text/css">
 a:link {
@@ -109,8 +110,9 @@ Check with your own Playlist ! <a href="http://kb2.adobe.com/cps/142/tn_14213.ht
             pluginspage="http://www.macromedia.com/go/getflashplayer" >
 </embed>
 </object>
-
-<br />
+<br><br>
+<canvas id="buffered_c" width="640" height="15" onclick="buffered_seek(event)";></canvas> <br>
+<br>
 
 
 <table border id="mediaControl0">
@@ -141,7 +143,6 @@ Check with your own Playlist ! <a href="http://kb2.adobe.com/cps/142/tn_14213.ht
   <td>Load Level</td>
   <td>Audio Track Id</td>
   <td> Playlist Sliding</td>
-  <td>UTC Date</td>
   <td>Start From Level</td>
   <td>Seek From Level</td>
   </tr>
@@ -158,17 +159,16 @@ Check with your own Playlist ! <a href="http://kb2.adobe.com/cps/142/tn_14213.ht
     <td>0</td>
     <td>0</td>
     <td>0</td>
-    <td>0</td>
     <td>-1</td>
     <td>-1</td>
   </tr>
-  <tr>  
+  <tr>
       <td colspan="2"><button onclick="toggleDebugLogs()">Toggle Debug1 Logs</button></td>
       <td colspan="2"><button onclick="toggleDebug2Logs()">Toggle Debug2 Logs</button></td>
       <td colspan="3"><button onclick="toggleFlushLiveURLCache()">Toggle flush Live URL Cache</button></td>
       <td colspan="2"><button onclick="toggleJSURLStream()"> JS URL Loader</button></td>
       <td colspan="3"><button onclick="toggleCapLeveltoStage()">Toggle Cap Level</button></td>
-      <td colspan="3"><button onclick="toggleUseHardwareVideoDecoder()">Toggle HW Decoder</button></td>  
+      <td colspan="3"><button onclick="toggleUseHardwareVideoDecoder()">Toggle HW Decoder</button></td>
   </tr>
   <tr>
       <td colspan="2">false</td>
@@ -190,36 +190,34 @@ Check with your own Playlist ! <a href="http://kb2.adobe.com/cps/142/tn_14213.ht
     <td><input type="text" name="volume_level"></td>
   </tr>
   <tr>
-    <th><button onclick="setstartfromlevel(document.getElementById('mediaControl').rows[2].cells[1].children[0].value)">Set Start From Level</button></th>
-    <td><input type="text" name="quality_level"></td>
-  </tr>
-  <tr>
-    <th><button onclick="setseekfromlevel(document.getElementById('mediaControl').rows[3].cells[1].children[0].value)">Set Seek From Level</button></th>
-    <td><input type="text" name="quality_level"></td>
-  </tr>  
-  <tr>
     <th><button onclick="setlevel(document.getElementById('mediaControl').rows[4].cells[1].children[0].value)">Set Level</button></th>
     <td><input type="text" name="quality_level"></td>
   </tr>
   <tr>
-  <th><button onclick="setlowBufferLength(document.getElementById('mediaControl').rows[5].cells[1].children[0].value)">Set low Buffer Length</button></th>
-    <td><input type="text" name="low_buffer_size"></td>
-  </tr>
-  <tr>
-  <th><button onclick="setminBufferLength(document.getElementById('mediaControl').rows[6].cells[1].children[0].value)">Set min Buffer Length</button></th>
-    <td><input type="text" name="min_buffer_size"></td>
-  </tr>
-  <tr>
-    <th><button onclick="setmaxBufferLength(document.getElementById('mediaControl').rows[7].cells[1].children[0].value)">Set max Buffer Length</button></th>
-    <td><input type="text" name="max_buffer_size"></td>
-  </tr>
-  <tr>
-    <th><button onclick="setmaxBackBufferLength(document.getElementById('mediaControl').rows[8].cells[1].children[0].value)">Set max back Buffer Length</button></th>
-    <td><input type="text" name="max_buffer_size"></td>
-  </tr>
-  
   </table>
 
+<h3 class="title">real time metrics</h1>
+<button type="button" class="btn btn-xs btn-primary" onclick="windowSliding=!windowSliding; refreshCanvas()">toggle sliding/fixed window</button><br>
+<button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(0)">window ALL</button>
+<button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(2000)">2s</button>
+<button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(5000)">5s</button>
+<button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(10000)">10s</button>
+<button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(20000)">20s</button>
+<button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(30000)">30s</button>
+<button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(60000)">60s</button>
+<button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSetSliding(120000)">120s</button><br>
+<button type="button" class="btn btn-xs btn-primary" onclick="timeRangeZoomIn()">Window Zoom In</button>
+<button type="button" class="btn btn-xs btn-primary" onclick="timeRangeZoomOut()">Window Zoom Out</button><br>
+<button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSlideLeft()"> <<< Window Slide </button>
+<button type="button" class="btn btn-xs btn-primary" onclick="timeRangeSlideRight()">Window Slide >>> </button><br>
+<button type="button" class="btn btn-xs btn-primary" onclick="windowStart=document.getElementById('windowStart').value">fixed window start(ms)</button>
+<input type="text" id='windowStart' defaultValue="0" size="8" onkeydown="if(event.keyCode=='13'){windowStart=document.getElementById('windowStart').value;}">
+<button type="button" class="btn btn-xs btn-primary" onclick="windowEnd=document.getElementById('windowEnd').value">fixed window end(ms)</button>
+<input type="text" id='windowEnd' defaultValue="10000" size="8" onkeydown="if(event.keyCode=='13'){windowEnd=document.getElementById('windowEnd').value;}"><br>
+<canvas id="bufferTimerange_c" width="640" height="100" style="border:1px solid #000000" onmousedown="timeRangeCanvasonMouseDown(event)" onmousemove="timeRangeCanvasonMouseMove(event)" onmouseup="timeRangeCanvasonMouseUp(event)" onmouseout="timeRangeCanvasonMouseOut(event)";></canvas>
+<canvas id="bufferWindow_c" width="640" height="100" style="border:1px solid #000000" onmousemove="windowCanvasonMouseMove(event)";></canvas>
+<canvas id="videoEvent_c" width="640" height="15" style="border:1px solid #000000";></canvas>
+<canvas id="loadEvent_c" width="640" height="15" style="border:1px solid #000000";></canvas><br>
 <h3> Test Videos </h3>
 <div> The following videos should stream correctly. Each time an
 issue is reported with a sample playlist, it will be added in the list
@@ -240,7 +238,11 @@ function userSubmit() {
 <script type="text/javascript">
 
 var current_url;
+var events;
+var startDate;
 var player_id = "mymoviename";
+var lastSeekingIdx;
+hideCanvas();
 
 function loadStream(url) {
   stop();
@@ -274,6 +276,7 @@ function appendLog(txt)
 function load(url) {
   var obj = getFlashMovieObject(player_id);
   if(obj != null) {
+    startDate = new Date();
     obj.playerLoad(url);
     appendLog("load URL " + url);
     document.getElementById('mediaInfo').rows[Y_POSITION].cells[X_POSITION].innerHTML =  0;
@@ -285,7 +288,6 @@ function load(url) {
     document.getElementById('mediaInfo').rows[Y_LOAD_LEVEL].cells[X_LOAD_LEVEL].innerHTML =  0;
     document.getElementById('mediaInfo').rows[Y_AUDIOTRACKID].cells[X_AUDIOTRACKID].innerHTML =  0;
     document.getElementById('mediaInfo').rows[Y_PLAYLIST_SLIDING].cells[X_PLAYLIST_SLIDING].innerHTML =  0;
-    document.getElementById('mediaInfo').rows[Y_UTC_DATE].cells[X_UTC_DATE].innerHTML =  0;
   }
 }
 
@@ -296,7 +298,6 @@ function play(url) {
   var obj = getFlashMovieObject(player_id);
   if(obj != null) {
     obj.playerPlay(-1);
-    appendLog("start playback");
   }
 }
 
@@ -304,7 +305,6 @@ function pause() {
   var obj = getFlashMovieObject(player_id);
   if(obj != null) {
     obj.playerPause();
-    appendLog("pause playback");
   }
 }
 
@@ -312,7 +312,6 @@ function resume() {
   var obj = getFlashMovieObject(player_id);
   if(obj != null) {
     obj.playerResume();
-    appendLog("resume playback");
   }
 }
 
@@ -320,7 +319,6 @@ function stop() {
   var obj = getFlashMovieObject(player_id);
   if(obj != null) {
     obj.playerStop();
-    appendLog("stopping playback");
   }
 }
 
@@ -331,25 +329,6 @@ function setlevel(level) {
     appendLog("force level to :" + level);
   }
 }
-
-function setstartfromlevel(level) {
-  var obj = getFlashMovieObject(player_id);
-  if(obj != null) {
-    obj.playerSetstartFromLevel(level);
-    document.getElementById('mediaInfo').rows[2].cells[12].innerHTML =  level;
-    appendLog("set start From level to :" + level);
-  }
-}
-
-function setseekfromlevel(level) {
-  var obj = getFlashMovieObject(player_id);
-  if(obj != null) {
-    obj.playerSetseekFromLevel(level);
-    document.getElementById('mediaInfo').rows[2].cells[13].innerHTML =  level;
-    appendLog("set seek From level to :" + level);
-  }
-}
-
 
 function seek(position) {
   var obj = getFlashMovieObject(player_id);
@@ -367,6 +346,13 @@ function volume(percent) {
   }
 }
 
+function getDuration() {
+  var obj = getFlashMovieObject(player_id);
+  if(obj != null) {
+    return obj.getDuration();
+  }
+}
+
 function getbufferLength() {
   var obj = getFlashMovieObject(player_id);
   if(obj != null) {
@@ -381,28 +367,10 @@ function getLowBufferLength() {
   }
 }
 
-function setlowBufferLength(new_len) {
-  var obj = getFlashMovieObject(player_id);
-  if(obj != null) {
-    obj.playerSetlowBufferLength(new_len);
-    appendLog("force low buffer len to :" + new_len);
-    document.getElementById('mediaInfo').rows[Y_LOW_BUFFER].cells[X_LOW_BUFFER].innerHTML = getLowBufferLength().toFixed(2);
-  }
-}
-
 function getMinBufferLength() {
   var obj = getFlashMovieObject(player_id);
   if(obj != null) {
     return obj.getminBufferLength();
-  }
-}
-
-function setminBufferLength(new_len) {
-  var obj = getFlashMovieObject(player_id);
-  if(obj != null) {
-    obj.playerSetminBufferLength(new_len);
-    appendLog("force min buffer len to :" + new_len);
-    document.getElementById('mediaInfo').rows[Y_MIN_BUFFER].cells[X_MIN_BUFFER].innerHTML = getMinBufferLength().toFixed(2);    
   }
 }
 
@@ -420,26 +388,6 @@ function getMaxBackBufferLength() {
   }
 }
 
-
-function setmaxBufferLength(new_len) {
-  var obj = getFlashMovieObject(player_id);
-  if(obj != null) {
-    obj.playerSetmaxBufferLength(new_len);
-    appendLog("force max buffer len to :" + new_len);
-    document.getElementById('mediaInfo').rows[Y_MAX_BUFFER].cells[X_MAX_BUFFER].innerHTML = getMaxBufferLength().toFixed(2);
-  }
-}
-
-function setmaxBackBufferLength(new_len) {
-  var obj = getFlashMovieObject(player_id);
-  if(obj != null) {
-    obj.playerSetbackBufferLength(new_len);
-    appendLog("set back buffer max len to :" + new_len);
-    document.getElementById('mediaInfo').rows[Y_MAX_BACK_BUFFER].cells[X_MAX_BACK_BUFFER].innerHTML = getMaxBackBufferLength().toFixed(2);
-  }
-}
-
-
 function toggleDebugLogs() {
   var obj = getFlashMovieObject(player_id);
   if(obj != null) {
@@ -447,7 +395,6 @@ function toggleDebugLogs() {
     state = !state;
     document.getElementById('mediaInfo').rows[Y_LOGDEBUG].cells[X_LOGDEBUG].innerHTML =  state;
     obj.playerSetLogDebug(state);
-    appendLog("toggle debug logs to:" + state);
   }
 }
 
@@ -458,7 +405,6 @@ function toggleDebug2Logs() {
     state = !state;
     document.getElementById('mediaInfo').rows[Y_LOGDEBUG2].cells[X_LOGDEBUG2].innerHTML =  state;
     obj.playerSetLogDebug2(state);
-    appendLog("toggle debug2 logs to:" + state);
   }
 }
 
@@ -469,7 +415,6 @@ function toggleUseHardwareVideoDecoder() {
     state = !state;
     document.getElementById('mediaInfo').rows[Y_USEHWDECODER].cells[X_USEHWDECODER].innerHTML =  state;
     obj.playerSetUseHardwareVideoDecoder(state);
-    appendLog("toggle hardware video decoder usage to:" + state);
   }
 }
 
@@ -481,7 +426,6 @@ function toggleFlushLiveURLCache() {
     state = !state;
     document.getElementById('mediaInfo').rows[Y_FLUSHLIVEURL].cells[X_FLUSHLIVEURL].innerHTML =  state;
     obj.playerSetflushLiveURLCache(state);
-    appendLog("toggle flush live URL cache to:" + state);
   }
 }
 
@@ -492,7 +436,6 @@ function toggleJSURLStream() {
     state = !state;
     document.getElementById('mediaInfo').rows[Y_JSURLLOADER].cells[X_JSURLLOADER].innerHTML =  state;
     obj.playerSetJSURLStream(state);
-    appendLog("toggle JS URL stream to:" + state);
   }
 }
 
@@ -503,7 +446,6 @@ function toggleCapLeveltoStage() {
     state = !state;
     document.getElementById('mediaInfo').rows[Y_CAPLEVEL].cells[X_CAPLEVEL].innerHTML =  state;
     obj.playerCapLeveltoStage(state);
-    appendLog("toggle cap Level to Stage to:" + state);
   }
 }
 
@@ -540,20 +482,23 @@ var flashlsEvents = {
     }
   },
   onVideoSize: function(instanceId, width, height) {
-    appendLog("onVideoSize(), " + width + "x" + height);
     var obj = getFlashMovieObject(player_id);
     if (obj != null) {
-    var state = obj.getCapLeveltoStage(); 
-    if(!state) {
-      var ratio = width / height;
-      if (height > 720) {
-      height = 720;
-      width = height * ratio;
+      var state = obj.getCapLeveltoStage();
+      if(!state) {
+        var ratio = width / height;
+        if (height > 720) {
+          height = 720;
+          width = height * ratio;
+        }
+        //appendLog("onVideoSize(),resize stage to " + width + "x" + height);
+        obj.width = width;
+        obj.height = height;
+        var canvas = document.getElementById('buffered_c');
+        canvas.width = width;
+        var event = {time : new Date() - startDate, type : "reize", name : width + 'x' + height};
+        events.video.push(event);
       }
-      appendLog("onVideoSize(),resize stage to " + width + "x" + height);
-      obj.width = width;
-      obj.height = height;
-    }
     }
   },
   onComplete: function(instanceId) {
@@ -562,34 +507,109 @@ var flashlsEvents = {
   onError: function(instanceId, code, url, message) {
     appendLog("onError():error code:"+ code + " url:" + url + " message:" + message);
   },
-  onFragmentLoaded: function(instanceId, loadmetrics) {
-    appendLog("onFragmentLoaded(): bandwidth:" + (loadmetrics.bandwidth/1000).toFixed(0) + "kb/s level:" + loadmetrics.level);
-  },
-  onFragmentPlaying: function(instanceId, playmetrics) {
-    appendLog("onFragmentPlaying(): metrics:" + playmetrics.level + " sn:" + playmetrics.seqnum + " cc:" + playmetrics.continuity_counter + " video_width:" + playmetrics.video_width + " video_height:" + playmetrics.video_height + " tags:" + playmetrics.tag_list);
-    document.getElementById('mediaInfo').rows[Y_UTC_DATE].cells[X_UTC_DATE].innerHTML =  new Date(playmetrics.program_date).toUTCString();  
-  },
-  onManifest: function(instanceId, duration) {
+  onManifest: function(instanceId, duration, loadmetrics) {
     appendLog("manifest loaded, playlist duration:"+ duration.toFixed(2));
     document.getElementById('mediaInfo').rows[Y_DURATION].cells[X_DURATION].innerHTML =  duration.toFixed(2);
+    showCanvas();
+    events = { url : current_url, date : new Date()-startDate, load : [], buffer : [], video : []};
+    play();
+    var event = {
+                type : "manifest",
+                name : "",
+                latency : loadmetrics.loading_begin_time - loadmetrics.loading_request_time,
+                load : loadmetrics.loading_end_time - loadmetrics.loading_begin_time,
+                duration : loadmetrics.loading_end_time - loadmetrics.loading_begin_time,
+                bw : Math.round(loadmetrics.bandwidth/1000)
+              };
+    event.time = new Date() - startDate - (loadmetrics.loading_end_time - loadmetrics.loading_request_time);
+    events.load.push(event);
+    refreshCanvas();
   },
-  onPosition: function(instanceId, timemetrics) {  
+   onAudioLevelLoaded: function(instanceId, loadmetrics) {
+    var event = {
+                type : "level audio",
+                id : loadmetrics.level,
+                start : loadmetrics.id,
+                end : loadmetrics.id2,
+                latency : loadmetrics.loading_begin_time - loadmetrics.loading_request_time,
+                load : loadmetrics.loading_end_time - loadmetrics.loading_begin_time,
+                duration : loadmetrics.loading_end_time - loadmetrics.loading_begin_time,
+                bw : Math.round(loadmetrics.bandwidth/1000)
+              };
+    event.time = new Date() - startDate - (loadmetrics.loading_end_time - loadmetrics.loading_request_time);
+    events.load.push(event);
+    refreshCanvas();
+  },
+  onLevelLoaded: function(instanceId, loadmetrics) {
+    var event = {
+                type : "level",
+                id : loadmetrics.level,
+                start : loadmetrics.id,
+                end : loadmetrics.id2,
+                latency : loadmetrics.loading_begin_time - loadmetrics.loading_request_time,
+                load : loadmetrics.loading_end_time - loadmetrics.loading_begin_time,
+                duration : loadmetrics.loading_end_time - loadmetrics.loading_begin_time,
+                bw : Math.round(loadmetrics.bandwidth/1000)
+              };
+    event.time = new Date() - startDate - (loadmetrics.loading_end_time - loadmetrics.loading_request_time);
+    events.load.push(event);
+    refreshCanvas();
+  },
+  onFragmentLoaded: function(instanceId, loadmetrics) {
+    var event = {
+                id : loadmetrics.level,
+                id2 : loadmetrics.id,
+                latency : loadmetrics.loading_begin_time - loadmetrics.loading_request_time,
+                load : loadmetrics.loading_end_time - loadmetrics.loading_begin_time,
+                demux : loadmetrics.parsing_end_time - loadmetrics.loading_end_time,
+                duration : loadmetrics.parsing_end_time - loadmetrics.loading_begin_time,
+                bw : Math.round(loadmetrics.bandwidth/1000)
+              };
+    event.time = new Date() - startDate - (loadmetrics.parsing_end_time - loadmetrics.loading_request_time);
+    if(loadmetrics.type == 4) {
+      event.type =  'fragment audio'
+    } else {
+      event.type =  'fragment main'
+    }
+    events.load.push(event);
+    refreshCanvas();
+  },
+  onFragmentPlaying: function(instanceId, playmetrics) {
+    var event = {time : new Date() - startDate, type : "playing frag", name : playmetrics.seqnum + '@' + playmetrics.level};
+    events.video.push(event);
+  },
+  onPosition: function(instanceId, timemetrics) {
     document.getElementById('mediaInfo').rows[Y_POSITION].cells[X_POSITION].innerHTML =  timemetrics.position.toFixed(2);
     document.getElementById('mediaInfo').rows[Y_DURATION].cells[X_DURATION].innerHTML =  timemetrics.duration.toFixed(2);
     document.getElementById('mediaInfo').rows[Y_BUFFER].cells[X_BUFFER].innerHTML =  timemetrics.buffer.toFixed(2);
     document.getElementById('mediaInfo').rows[Y_BACK_BUFFER].cells[X_BACK_BUFFER].innerHTML =  timemetrics.backbuffer.toFixed(2);
-    document.getElementById('mediaInfo').rows[Y_PLAYLIST_SLIDING].cells[X_PLAYLIST_SLIDING].innerHTML =  timemetrics.live_sliding.toFixed(2);
+    document.getElementById('mediaInfo').rows[Y_PLAYLIST_SLIDING].cells[X_PLAYLIST_SLIDING].innerHTML =  timemetrics.live_sliding_main.toFixed(2);
+    events.buffer.push({ time : new Date() - startDate, buffer : Math.round(1000*timemetrics.buffer), pos: Math.round(1000*timemetrics.position)});
+    updateBufferCanvas(timemetrics.position,timemetrics.duration,timemetrics.buffer, timemetrics.backbuffer);
+    refreshCanvas();
   },
-  onState: function(instanceId, newState) {
-    appendLog("switching state to "+ newState + ", bufferlen:" + getbufferLength());
+  onPlaybackState: function(instanceId, newState) {
+    var event = {time : new Date() - startDate, type : newState.toLowerCase(), name : ''};
+    events.video.push(event);
     document.getElementById('mediaInfo').rows[Y_STATE].cells[X_STATE].innerHTML =  newState;
   },
+  onSeekState: function(instanceId, newState) {
+    var event = {time : new Date() - startDate, type : newState.toLowerCase(), name : ''};
+    events.video.push(event);
+
+    if(event.type === 'seeking') {
+      lastSeekingIdx = events.video.length-1;
+    }
+    if(event.type === 'seeked') {
+      events.video[lastSeekingIdx].duration = event.time - events.video[lastSeekingIdx].time;
+    }
+  },
   onSwitch: function(instanceId, newLevel) {
-    appendLog("switching level to "+ newLevel);
+    var event = {time : new Date() - startDate, type : "levelSwitch", name : newLevel.toFixed()};
+    events.video.push(event);
     document.getElementById('mediaInfo').rows[Y_LOAD_LEVEL].cells[X_LOAD_LEVEL].innerHTML =  newLevel;
   },
   onAudioTracksListChange: function(instanceId, trackList) {
-    // update audio switcher
     var d = document.getElementById('audioControl');
     var html = '';
     appendLog("new track list");
@@ -600,113 +620,44 @@ var flashlsEvents = {
     d.innerHTML = html;
   },
   onAudioTrackChange: function(instanceId, trackId) {
-    appendLog("switching audio track to "+ trackId);
+    var event = {time : new Date() - startDate, type : "audioTrackChange", name : trackId.toFixed()};
+    events.video.push(event);
     document.getElementById('mediaInfo').rows[Y_AUDIOTRACKID].cells[X_AUDIOTRACKID].innerHTML = trackId;
   }
 };
 
-function onRequestResource0(URL) {
-  appendLog("loading fragment "+ URL + " for instance 0");
-  URL_request(URL,URL_readBytes0, transferFailed0, "arraybuffer");  
+
+function showCanvas()  {
+    showMetrics();
+    document.getElementById('buffered_c').style.display="block";
 }
 
-function onRequestResource1(URL) {
-  appendLog("loading fragment "+ URL + " for instance 1");
-  URL_request(URL,URL_readBytes1,transferFailed1, "arraybuffer");  
-}
-
-function URL_request(url, loadcallback, errorcallback,responseType) {
-    var xhr = new XMLHttpRequest();
-    xhr.open("GET", url, loadcallback? true: false);
-    if (responseType) {
-      xhr.responseType = responseType;
-    }
-    if (loadcallback) {
-      xhr.onload = loadcallback;
-      xhr.onerror= errorcallback;
-      xhr.send();
-    } else {
-      xhr.send();
-      return xhr.status == 200? xhr.response: "";
-    }
-}
-function transferFailed0(oEvent) {
-    appendLog("An error occurred while transferring the file :" + oEvent.target.status);
-  var obj = getFlashMovieObject(player_id);
-  if(obj != null) {
-    obj.resourceLoadingError0();
-  }
-}
-
-function transferFailed1(oEvent) {
-    appendLog("An error occurred while transferring the file :" + oEvent.target.status);
-  var obj = getFlashMovieObject(player_id);
-  if(obj != null) {
-    obj.resourceLoadingError1();
-  }
+function hideCanvas()  {
+    hideMetrics();
+    document.getElementById('buffered_c').style.display="none";
 }
 
 
-function URL_readBytes0(event) {
-  appendLog("fragment loaded");
-  var res = base64ArrayBuffer(event.currentTarget.response);
-  resourceLoaded0(res);
+function buffered_seek(event) {
+  var canvas = document.getElementById('buffered_c');
+  var position = (event.clientX - canvas.offsetLeft) / canvas.width * getDuration();
+  seek(position);
 }
 
-function URL_readBytes1(event) {
-  appendLog("fragment loaded");
-  var res = base64ArrayBuffer(event.currentTarget.response);
-  resourceLoaded1(res);
+function updateBufferCanvas(position,duration,buffer, backbuffer) {
+  var canvas = document.getElementById('buffered_c');
+  var ctx = canvas.getContext('2d');
+  ctx.fillStyle = "black";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.fillStyle = "gray";
+  var start = (position-backbuffer)/duration * canvas.width;
+  var end = (position+buffer)/duration * canvas.width;
+  ctx.fillRect(start, 3, Math.max(2, end-start), 10);
+  ctx.fillStyle = "blue";
+  var x = position / duration * canvas.width;
+  ctx.fillRect(x, 0, 2, 15);
 }
 
-
-function resourceLoaded0(res) {
-  var obj = getFlashMovieObject(player_id);
-  if(obj != null) {
-    obj.resourceLoaded0(res);
-  }
-}
-
-function resourceLoaded1(res) {
-  var obj = getFlashMovieObject(player_id);
-  if(obj != null) {
-    obj.resourceLoaded1(res);    
-  }
-}
-
-function base64ArrayBuffer(arrayBuffer) {
-    var base64 = ''
-    var encodings = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/'
-    var bytes = new Uint8Array(arrayBuffer)
-    var byteLength = bytes.byteLength
-    var byteRemainder = byteLength % 3
-    var mainLength = byteLength - byteRemainder
-    var a, b, c, d, chunk
-
-    for (var i = 0; i < mainLength; i = i + 3) {
-      chunk = (bytes[i] << 16) | (bytes[i + 1] << 8) | bytes[i + 2]
-      a = (chunk & 16515072) >> 18 // 16515072 = (2^6 - 1) << 18
-      b = (chunk & 258048) >> 12 // 258048 = (2^6 - 1) << 12
-      c = (chunk & 4032) >> 6 // 4032 = (2^6 - 1) << 6
-      d = chunk & 63 // 63 = 2^6 - 1
-      base64 += encodings[a] + encodings[b] + encodings[c] + encodings[d]
-    }
-
-    if (byteRemainder == 1) {
-      chunk = bytes[mainLength]
-      a = (chunk & 252) >> 2 // 252 = (2^6 - 1) << 2
-      b = (chunk & 3) << 4 // 3 = 2^2 - 1
-      base64 += encodings[a] + encodings[b] + '=='
-    } else if (byteRemainder == 2) {
-      chunk = (bytes[mainLength] << 8) | bytes[mainLength + 1]
-      a = (chunk & 64512) >> 10 // 64512 = (2^6 - 1) << 10
-      b = (chunk & 1008) >> 4 // 1008 = (2^6 - 1) << 4
-      c = (chunk & 15) << 2 // 15 = 2^4 - 1
-      base64 += encodings[a] + encodings[b] + encodings[c] + '='
-    }
-
-    return base64;
-}
 
 function getFlashMovieObject(movieName)
 {
