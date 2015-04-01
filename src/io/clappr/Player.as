@@ -94,9 +94,9 @@ package io.clappr {
       }
     }
 
-    override protected function _manifestHandler(event : HLSEvent) : void {
+    override protected function _manifestLoadedHandler(event : HLSEvent) : void {
       _manifestLoaded = true;
-      _hls.removeEventListener(HLSEvent.MANIFEST_LOADED, _manifestHandler);
+      _hls.removeEventListener(HLSEvent.MANIFEST_LOADED, _manifestLoadedHandler);
     }
 
     private function firstPlay(event: HLSEvent):void {
@@ -110,9 +110,9 @@ package io.clappr {
       _hls.stage = stage;
       _hls.addEventListener(HLSEvent.ERROR, _errorHandler);
       _hls.addEventListener(HLSEvent.MEDIA_TIME, _mediaTimeHandler);
-      _hls.addEventListener(HLSEvent.PLAYBACK_STATE, _stateHandler);
+      _hls.addEventListener(HLSEvent.PLAYBACK_STATE, _playbackStateHandler);
       _hls.addEventListener(HLSEvent.FRAGMENT_LOADED, _fragmentLoadedHandler);
-      _hls.addEventListener(HLSEvent.MANIFEST_LOADED, _manifestHandler);
+      _hls.addEventListener(HLSEvent.MANIFEST_LOADED, _manifestLoadedHandler);
 
       _resizeStage(available);
 
@@ -132,7 +132,7 @@ package io.clappr {
       }
     }
 
-    override protected function _stateHandler(event : HLSEvent) : void {
+    override protected function _playbackStateHandler(event : HLSEvent) : void {
       _triggerEvent('playbackstate', event.state);
     };
 
