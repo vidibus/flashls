@@ -111,7 +111,7 @@ package org.mangui.hls {
 
         /*  set quality level for next loaded fragment (-1 for automatic level selection) */
         public function set level(level : int) : void {
-            _manual_level = level;
+            _level = level;
         };
 
         /* check if we are in automatic level selection mode */
@@ -122,6 +122,11 @@ package org.mangui.hls {
         /* return manual level */
         public function get manuallevel() : int {
             return _manual_level;
+        };
+
+        /* set manual level */
+        public function set manuallevel(level : int) : void {
+            _manual_level = level;
         };
 
         /** Return a Vector of quality level **/
