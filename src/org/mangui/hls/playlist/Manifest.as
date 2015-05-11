@@ -307,19 +307,24 @@ package org.mangui.hls.playlist {
         /** Extract levels from manifest data. **/
         public static function extractLevels(hls : HLS, data : String, base : String = '') : Vector.<Level> {
             var levels : Array = [];
+            var levelMap : Object = {};
             var level : Level;
             var lines : Array = data.split("\n");
             var level_found : Boolean = false;
+            var tag : String;
             var i : int = 0;
+            var url : String;
             while (i < lines.length) {
                 var line : String = lines[i++];
                 // discard blank line, length could be 0 or 1 if DOS terminated line (CR/LF)
                 if (line.length <= 1) {
                     continue;
                 }
+                // parse tag line
                 if (line.indexOf(LEVEL) == 0) {
                     level_found = true;
                     level = new Level();
+                    tag = line;
                     var params : Array = line.substr(LEVEL.length).split(',');
                     for (var j : int = 0; j < params.length; j++) {
                         var param : String = params[j];
@@ -347,11 +352,20 @@ package org.mangui.hls.playlist {
                             level.name = (param.split('=')[1] as String).replace(replacedoublequote, "");
                         }
                     }
+                // parse URL line and add level to list
                 } else if (level_found == true) {
-                    level.url = _extractURL(line, base);
-                    levels.push(level);
+                    url = _extractURL(line, base);
+                    if (levelMap[tag] === undefined) {
+                        level.urls = [url]
+                        levelMap[tag] = level;
+                    } else {
+                        levelMap[tag].urls.push(url)
+                    }
                     level_found = false;
                 }
+            }
+            for (var key:String in levelMap) {
+                levels.push(levelMap[key])
             }
             var levelsLength : int = levels.length;
             if (levelsLength == 0) {

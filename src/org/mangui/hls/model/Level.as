@@ -27,8 +27,8 @@ package org.mangui.hls.model {
         public var width : int;
         /** video height (from playlist) **/
         public var height : int;
-        /** URL of this bitrate level (for M3U8). **/
-        public var url : String;
+        /** Available URLs of this bitrate level (for M3U8). **/
+        public var urls : Array;
         /** Level fragments **/
         public var fragments : Vector.<Fragment>;
         /** min sequence number from M3U8. **/

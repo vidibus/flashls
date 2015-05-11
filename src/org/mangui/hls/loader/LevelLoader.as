@@ -59,6 +59,8 @@ package org.mangui.hls.loader {
         private var _alt_audio_tracks : Vector.<AltAudioTrack>;
         /* manifest load metrics */
         private var _metrics : HLSLoadMetrics;
+        /* index of URL to load playlist from (for failover) */
+        private var _playlistUrlIndex : int = 0;
 
         /** Setup the loader. **/
         public function LevelLoader(hls : HLS) {
@@ -91,14 +93,25 @@ package org.mangui.hls.loader {
                 code = HLSError.MANIFEST_LOADING_CROSSDOMAIN_ERROR;
                 txt = "Cannot load M3U8: crossdomain access denied:" + event.text;
             } else if (event is IOErrorEvent && _levels.length && (HLSSettings.manifestLoadMaxRetry == -1 || _retry_count < HLSSettings.manifestLoadMaxRetry)) {
-                CONFIG::LOGGING {
-                    Log.warn("I/O Error while trying to load Playlist, retry in " + _retry_timeout + " ms");
+                if (_playlistUrlIndex < _levels[_current_level].urls.length - 1) {
+                    _playlistUrlIndex += 1;
+                    CONFIG::LOGGING {
+                        Log.warn("I/O Error while trying to load Playlist, switching to failover URL now.");
+                    }
+                    clearTimeout(_timeoutID);
+                    _timeoutID = setTimeout(_loadActiveLevelPlaylist, 0);
+                    return;
+                } else {
+                    CONFIG::LOGGING {
+                        Log.warn("I/O Error while trying to load Playlist, retry in " + _retry_timeout + " ms");
+                    }
+                    _playlistUrlIndex = 0;
+                    _timeoutID = setTimeout(_loadActiveLevelPlaylist, _retry_timeout);
+                    /* exponential increase of retry timeout, capped to manifestLoadMaxRetryTimeout */
+                    _retry_timeout = Math.min(HLSSettings.manifestLoadMaxRetryTimeout, 2 * _retry_timeout);
+                    _retry_count++;
+                    return;
                 }
-                _timeoutID = setTimeout(_loadActiveLevelPlaylist, _retry_timeout);
-                /* exponential increase of retry timeout, capped to manifestLoadMaxRetryTimeout */
-                _retry_timeout = Math.min(HLSSettings.manifestLoadMaxRetryTimeout, 2 * _retry_timeout);
-                _retry_count++;
-                return;
             } else {
                 code = HLSError.MANIFEST_LOADING_IO_ERROR;
                 txt = "Cannot load M3U8: " + event.text;
@@ -219,7 +232,7 @@ package org.mangui.hls.loader {
                 // 1 level playlist, create unique level and parse playlist
                 if (string.indexOf(Manifest.FRAGMENT) > 0) {
                     var level : Level = new Level();
-                    level.url = _url;
+                    level.urls = [_url];
                     _levels.push(level);
                     _metrics.parsing_end_time = getTimer();
                     _hls.dispatchEvent(new HLSEvent(HLSEvent.MANIFEST_PARSED, _levels));
@@ -269,7 +282,7 @@ package org.mangui.hls.loader {
             // load active M3U8 playlist only
             _manifest_loading = new Manifest();
             _hls.dispatchEvent(new HLSEvent(HLSEvent.LEVEL_LOADING, _current_level));
-            _manifest_loading.loadPlaylist(_levels[_current_level].url, _parseLevelPlaylist, _errorHandler, _current_level, _type, HLSSettings.flushLiveURLCache);
+            _manifest_loading.loadPlaylist(_levels[_current_level].urls[_playlistUrlIndex], _parseLevelPlaylist, _errorHandler, _current_level, _type, HLSSettings.flushLiveURLCache);
         };
 
         /** When level switch occurs, assess the need of (re)loading new level playlist **/
