@@ -63,6 +63,7 @@ package io.clappr {
       ExternalInterface.addCallback("globoPlayerSetlowBufferLength", _setlowBufferLength);
       ExternalInterface.addCallback("globoPlayerCapLeveltoStage", _setCapLeveltoStage);
       ExternalInterface.addCallback("playerSetAudioTrack", _setAudioTrack);
+      ExternalInterface.addCallback("playerSetLogInfo", _setLogInfo);
       ExternalInterface.addCallback("playerSetLogDebug", _setLogDebug);
       ExternalInterface.addCallback("playerSetLogDebug2", _setLogDebug2);
     };
@@ -186,6 +187,10 @@ package io.clappr {
     private function _setScaleMode(mode:String):void {
       stage.scaleMode = mode;
       _resizeStage(true);
+    };
+
+    protected function _setLogInfo(info : Boolean) : void {
+      HLSSettings.logInfo = info;
     };
   }
 }
