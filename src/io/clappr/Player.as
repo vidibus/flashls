@@ -71,7 +71,9 @@ package io.clappr {
     };
 
     protected function flashReady(): void {
-      ExternalInterface.call("console.log", "FlasHLS Clappr (version: 0.2, id: " + this.playbackId + ")");
+      CONFIG::LOGGING {
+        Log.info("FlasHLS Clappr (version: 0.2, id: " + this.playbackId + ")")
+      }
       _triggerEvent('flashready');
     };
 
