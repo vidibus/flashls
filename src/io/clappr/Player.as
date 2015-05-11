@@ -74,10 +74,10 @@ package io.clappr {
     };
 
     protected function flashReady(): void {
+      _triggerEvent('flashready');
       CONFIG::LOGGING {
         Log.info("FlasHLS Clappr (version: 0.2, id: " + this.playbackId + ")")
       }
-      _triggerEvent('flashready');
     };
 
     override protected function _getLevels() : Vector.<Level> {
